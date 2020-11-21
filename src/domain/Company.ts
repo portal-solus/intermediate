@@ -33,11 +33,13 @@ export class Company {
     public readonly incubated: boolean,
     public readonly ecosystems: string[],
     public readonly services: string,
+    public readonly technologies: string,
     public readonly address: Address,
   ) {
     this.id = Company.nextID++;
     this.inspect.name = removeAccent(this.name);
     this.inspect.descriptionLong = removeAccent(this.description.long);
+    this.inspect.technologies = removeAccent(this.technologies);
     this.inspect.services = removeAccent(this.services);
   }
 }
@@ -46,15 +48,16 @@ export class CompanyGenerator{
   static run(row: any[]): Company {
     const hash = indexColumns(row);
 
-    const name =        CompanyGenerator.handleName(hash["AC"]);
-    const year =        CompanyGenerator.handleYear(hash["AE"]);
-    const emails =      CompanyGenerator.handleEmails(hash["AH"]);
-    const address =     CompanyGenerator.handleAddress(hash)
-    const category =    CompanyGenerator.handleCategory(hash["BY"]);
-    const services =    CompanyGenerator.handleServices(hash["BD"]);
-    const incubated =   CompanyGenerator.handleIncubated(hash["AR"]);
-    const ecosystems =  CompanyGenerator.handleEcosystems(hash["AR"]);
-    const description = CompanyGenerator.handleDescription(hash["BC"]);
+    const name =          CompanyGenerator.handleName(hash["AC"]);
+    const year =          CompanyGenerator.handleYear(hash["AE"]);
+    const emails =        CompanyGenerator.handleEmails(hash["AH"]);
+    const address =       CompanyGenerator.handleAddress(hash)
+    const category =      CompanyGenerator.handleCategory(hash["BY"]);
+    const services =      CompanyGenerator.handleServices(hash["BD"]);
+    const incubated =     CompanyGenerator.handleIncubated(hash["AR"]);
+    const ecosystems =    CompanyGenerator.handleEcosystems(hash["AR"]);
+    const description =   CompanyGenerator.handleDescription(hash["BC"]);
+    const technologies =  CompanyGenerator.handleTechnologies(hash["AP"]);
 
     const company: Company = new Company(
       name,
@@ -65,6 +68,7 @@ export class CompanyGenerator{
       incubated,
       ecosystems,
       services,
+      technologies,
       address,
     );
 
@@ -128,5 +132,13 @@ export class CompanyGenerator{
       state: indexed["AM"],
       cep: indexed["AN"],
     }
+  }
+
+  private static handleTechnologies(rawTechnologies: string): string {
+    const rejectValues = ["", ".", "0", "!", "?", "???", "-"];
+    if (!rawTechnologies || rejectValues.includes(rawTechnologies))
+      return "";
+
+    return rawTechnologies;
   }
 }
