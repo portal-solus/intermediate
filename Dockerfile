@@ -10,7 +10,7 @@ RUN yarn install
 
 COPY . ./
 
-RUN node src/index.js
+RUN yarn dev
 
 # prod image
 
