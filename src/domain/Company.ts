@@ -1,222 +1,132 @@
-import { formatURL, formatPhone, removeAccent } from "../format";
-import { columnValue } from "../sheets";
+import { removeAccent } from '../format';
+import { indexColumns } from '../sheets';
 
-const NDrgx = /(n\/d)/;
-const spaceRgx = /( )/;
+interface Category {
+  code: string;
+  name: string;
+}
+
+interface Description {
+  long: string;
+}
+
+interface Address {
+  venue: string;
+  neightborhood: string;
+  city: string;
+  state: string;
+  cep: string;
+}
 
 export class Company {
-  static ID = 1;
-  static incubators = [
-    "Direto para o Mercado",
-    "CIETEC – Centro de Inovação, Empreendedorismo e Tecnologia",
-    "ESALQTec – Incubadora de Empresas Agrozootécnicas de Piracicaba",
-    "HABITs – Habitat de Inovação Tecnológica e Social/Incubadora-Escola",
-    "INOVA-HC",
-    "InovaLab@POLI",
-    "ParqTec – Fundação Parque Tecnológico de São Carlos",
-    "Parque Tecnológico Univap",
-    "Pqtec – Parque Tecnológico São José dos Campos",
-    "Supera – Incubadora de Empresas de Base Tecnológica de Ribeirão Preto",
-  ];
-  static keys = [
-    "inspect.name",
-    "inspect.descriptionLong",
-    "inspect.services",
-    "inspect.technologies",
-  ];
+  static nextID: number = 0;
 
-  public inspect: any = {}; 
-  public id: any;
-  public name: any;
-  public year: any;
-  public category: any;
-  public emails: any;
-  public description: any;
-  public incubated: any;
-  public ecosystems: any;
-  public services: any;
-  public address: any;
-  public allowed: boolean = true;
-  public active: boolean = true;
-
-  public _phones: any;
-  public _url: any;
-  public _technologies: any;
-  public _logo: any;
-  public _socialMedia: any;
+  public inspect: any = {};
+  public id: number;
 
   constructor(
-    name,
-    year,
-    emails,
-    category,
-    description,
-    incubated,
-    ecosystems,
-    services,
-    address
+    public readonly name: string,
+    public readonly year: string,
+    public readonly emails: string[],
+    public readonly category: Category,
+    public readonly description: Description,
+    public readonly incubated: boolean,
+    public readonly ecosystems: string[],
+    public readonly services: string,
+    public readonly address: Address,
   ) {
-    this.id = Company.ID++;
-    this.name = name;
-    this.inspect.name = removeAccent(`${this.name}`);
-
-    this.year = year;
-    this.emails = emails;
-    this.category = category;
-    this.description = description;
-    this.inspect.descriptionLong = removeAccent(this.description.long || "");
-
-    this.incubated = incubated;
-    this.ecosystems = ecosystems;
-    this.services = services;
-    this.inspect.services = removeAccent(this.services || "");
-
-    this.address = address;
-
-    this._phones = [];
-    this._url = "";
-    this._technologies = [];
-    this._logo = "";
-    this._socialMedia = "";
-  }
-
-  set phones(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._phones = rawColumn.split(/[;/]/).map((phone) => formatPhone(phone));
-    }
-  }
-
-  get phones() {
-    return this._phones;
-  }
-
-  set url(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "" && rawColumn != "." && rawColumn != "n/d") {
-      this._url = formatURL(rawColumn);
-    }
-  }
-
-  get url() {
-    return this._url;
-  }
-
-  set technologies(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._technologies = "-.!?".split("").includes(rawColumn)
-        ? []
-        : rawColumn.split(";");
-
-      this.inspect.technologies = this._technologies.map(removeAccent);
-    }
-  }
-
-  get technologies() {
-    return this._technologies;
-  }
-
-  set logo(rawColumn) {
-    if (!rawColumn) return;
-
-    this._logo = `https://drive.google.com/uc?export=view&id=${rawColumn}`
-  }
-
-  get logo() {
-    return this._logo;
-  }
-
-  set socialMedia(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._socialMedia = rawColumn;
-    }
-  }
-
-  get socialMedia() {
-    return this._socialMedia;
-  }
-
-  get city() {
-    return this.address.city || [];
-  }
-
-  matchesFilter({ primary, secondary, terciary }, baseTabs, reverseCNAEmap) {
-    let primaryMatch, secondaryMatch, terciaryMatch;
-
-    if (primary.length == 0) {
-      primaryMatch = true;
-    } else {
-      primaryMatch = primary
-        .reduce(
-          (codes, p) =>
-            codes.concat(baseTabs.find(({ name }) => name === p).CNAECodes),
-          []
-        )
-        .includes(this.category.code);
-    }
-
-    if (secondary.length == 0) {
-      secondaryMatch = true;
-    } else {
-      secondaryMatch = secondary
-        .reduce((codes, s) => codes.concat(reverseCNAEmap[s]), [])
-        .includes(this.category.code);
-    }
-
-    const city = terciary[0];
-    const incubator = terciary[1];
-
-    terciaryMatch = true;
-
-    if (city) {
-      terciaryMatch = this.city.includes(city);
-    }
-
-    if (incubator) {
-      terciaryMatch = terciaryMatch && this.ecosystems.includes(incubator);
-    }
-
-    return primaryMatch && secondaryMatch && terciaryMatch;
+    this.id = Company.nextID++;
+    this.inspect.name = removeAccent(this.name);
+    this.inspect.descriptionLong = removeAccent(this.description.long);
+    this.inspect.services = removeAccent(this.services);
   }
 }
 
-export class CompanyGenerator {
-  static run(row) {
-    const category = columnValue(row, "BY");
+export class CompanyGenerator{
+  static run(row: any[]): Company {
+    const hash = indexColumns(row);
 
-    const base = new Company(
-      columnValue(row, "AC"),
-      columnValue(row, "AE"),
-      columnValue(row, "AH").split(";"), //
-      {
-        code: category != undefined ? category.substr(0, 2) : "",
-        name: category != undefined ? category.split(" ").slice(1).join(" ") : "",
-      },
-      {
-        long: columnValue(row, "BC") == "." ? "" : columnValue(row, "BC"),
-      },
-      ". Nenhum Nenhuma Não".split(" ").includes(columnValue(row, "AR")),
-      columnValue(row, "AR").split(";"),
-      columnValue(row, "BD") == "." ? "" : columnValue(row, "BD"),
-      {
-        venue: columnValue(row, "AJ"),
-        neightborhood: columnValue(row, "AK"),
-        city: columnValue(row, "AL").split(";"),
-        state: columnValue(row, "AM"),
-        cep: columnValue(row, "AN"),
-      }
+    const name =        CompanyGenerator.handleName(hash["AC"]);
+    const year =        CompanyGenerator.handleYear(hash["AE"]);
+    const emails =      CompanyGenerator.handleEmails(hash["AH"]);
+    const address =     CompanyGenerator.handleAddress(hash)
+    const category =    CompanyGenerator.handleCategory(hash["BY"]);
+    const services =    CompanyGenerator.handleServices(hash["BD"]);
+    const incubated =   CompanyGenerator.handleIncubated(hash["AR"]);
+    const ecosystems =  CompanyGenerator.handleEcosystems(hash["AR"]);
+    const description = CompanyGenerator.handleDescription(hash["BC"]);
+
+    const company: Company = new Company(
+      name,
+      year,
+      emails,
+      category,
+      description,
+      incubated,
+      ecosystems,
+      services,
+      address,
     );
 
-    base.phones = columnValue(row, "AG");
-    
-    const companyUrl = columnValue(row, "AI");
+    return company;
+  }
 
-    if (!companyUrl.match(NDrgx) && !companyUrl.match(spaceRgx))
-      base.url = companyUrl;
+  private static handleName(rawName: string): string {
+    return `${rawName}`;
+  }
 
-    base.technologies = columnValue(row, "AP");
-    base.logo = columnValue(row, "BE");
-    base.socialMedia = columnValue(row, "BF");
+  private static handleYear(rawYear: string): string {
+    return `${rawYear}`;
+  }
 
-    return base;
+  private static handleEmails(rawEmails: string): string[] {
+    return rawEmails.split(';');
+  }
+
+  private static handleCategory(rawCategory: string): Category {
+    if (!rawCategory)
+      return { code: '', name: '' };
+
+    return {
+      code: rawCategory.substr(0, 2),
+      name: rawCategory.split(' ').slice(1).join(' '),
+    };
+  }
+
+  private static handleDescription(rawDescription: string): Description {
+    if(!rawDescription || rawDescription == '.')
+      return { long: '' };
+
+    return { long: rawDescription };
+  }
+
+  private static handleIncubated(rawIncubated: string): boolean {
+    const rejectValues = [".", "Nenhum", "Nenhuma", "Não", "", undefined];
+
+    return !rejectValues.includes(rawIncubated);
+  }
+
+  private static handleEcosystems(rawEcosystems: string): string[] {
+    if (!CompanyGenerator.handleIncubated(rawEcosystems))
+      return [];
+
+    return rawEcosystems.split(';');
+  }
+
+  private static handleServices(rawServices: string): string {
+    if (!rawServices || rawServices == ".")
+      return "";
+
+    return rawServices;
+  }
+
+  private static handleAddress(indexed: any): Address {
+    return {
+      venue: indexed["AJ"],
+      neightborhood: indexed["AK"],
+      city: indexed["AL"].split(';'),
+      state: indexed["AM"],
+      cep: indexed["AN"],
+    }
   }
 }
-
