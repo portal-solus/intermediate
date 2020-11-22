@@ -34,7 +34,7 @@ export class Iniciative {
     this.inspect.name = removeAccent(this.name);
     this.inspect.descriptionLong = removeAccent(this.description.long);
     this.inspect.descriptionShort = removeAccent(this.description.short);
-    this.inspect.keywords = removeAccent(this.keywords);
+    this.inspect.keywords = this.keywords.map(removeAccent);
     this.inspect.services = removeAccent(this.services);
     this.inspect.contactPerson = removeAccent(this.contact.person);
   }
