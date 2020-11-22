@@ -1,4 +1,4 @@
-import { removeAccent } from '../format';
+import { formatPhone, removeAccent } from '../format';
 import { indexColumns } from '../sheets';
 
 interface Description {
@@ -66,19 +66,19 @@ export class PDIGenerator {
   }
 
   private static handleName(rawName: string): string {
-    return `${rawName}`;
+    return rawName || "";
   }
 
   private static handleCategory(rawCategory: string): string {
-    return `${rawCategory}`;
+    return rawCategory || "";
   }
 
   private static handleCampus(rawCampus: string): string {
-    return `${rawCampus}`;
+    return rawCampus || "";
   }
 
   private static handleUnity(rawUnity: string): string {
-    return `${rawUnity}`;
+    return rawUnity || "";
   }
 
   private static handleDescription(indexed: any): Description {
@@ -93,18 +93,21 @@ export class PDIGenerator {
   }
 
   private static handleKnowledge(kn: string): string {
-    return `${kn}`;
+    return kn || "";
   }
 
   private static handleCoordinator(coord: string): string {
-    return `${coord}`;
+    return coord || "";
   }
 
   private static handleEmail(raw: string): string {
-    return `${raw}`;
+    return raw || "";
   }
 
   private static handlePhone(raw: string): string {
-    return `${raw}`;
+    if (!raw)
+      return "";
+
+    return formatPhone(raw);
   }
 }
