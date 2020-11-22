@@ -1,162 +1,110 @@
-import { formatURL, removeAccent } from "../format";
+import { removeAccent } from '../format';
+import { indexColumns } from '../sheets';
 
-let ID = 1;
-
-const spaceRgx = /( )/;
-const dotRgx = /.+\..+/; // match "bsa.legal" which is a valid url
-
-const checkUrl = (url) => !url.match(spaceRgx) && url.match(dotRgx);
-
-function formatInput(rawColumn) {
-  if (rawColumn == "N/D")
-    return undefined;
-  return rawColumn;
+interface Description {
+  short: string;
+  long: string;
 }
 
 export class PDI {
-  static keys = [
-    "inspect.name",
-    "inspect.descriptionShort",
-    "inspect.descriptionLong",
-    "inspect.knowledge",
-    "inspect.keywords",
-  ];
+  private static nextID: number = 1;
 
-  public inspect: any = {};
+  public readonly inspect: any = {};
+  public readonly id: number;
 
-  public id: any;
-  public name: any;
-  public category: any;
-  public campus: any;
-  public unity: any;
-  public description: any;
-
-  public _keywords: any;
-  public _knowledge: any;
-  public _url: any;
-  public _coordinator: any;
-  public _email: any;
-  public _phone: any;
-
-  constructor(name, category, campus, unity, description) {
-    this.id = ID++;
-    this.name = name;
+  constructor(
+    public readonly name: string,
+    public readonly category: string,
+    public readonly campus: string,
+    public readonly unity: string,
+    public readonly description: Description,
+    public readonly keywords: string[],
+    public readonly knowledge: string,
+    public readonly coordinator: string,
+    public readonly email: string,
+    public readonly phone: string,
+  ) {
+    this.id = PDI.nextID++;
     this.inspect.name = removeAccent(this.name);
-
-    this.category = category;
-    this.campus = campus;
-    this.unity = unity;
-    this.description = description;
-    this.inspect.descriptionShort = removeAccent(this.description.short || "");
-    this.inspect.descriptionLong = removeAccent(this.description.long || "");
-
-    this._keywords = [];
-    this._knowledge = [];
-    this._url = "";
-    this._coordinator = "";
-    this._email = "";
-    this._phone = "";
-  }
-
-  set keywords(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._keywords = rawColumn.split(/[,;]/);
-
-      this.inspect.keywords = this._keywords.map(removeAccent);
-    }
-  }
-
-  get keywords() {
-    return this._keywords;
-  }
-
-  set url(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._url = formatURL(rawColumn);
-    }
-  }
-
-  get url() {
-    return this._url;
-  }
-
-  set knowledge(rawColumn) {
-    if (rawColumn != undefined && rawColumn.length > 0) {
-      this._knowledge = rawColumn.split(/[,;]/);
-
-      this.inspect.knowledge = this._knowledge.map(removeAccent);
-    }
-  }
-
-  get knowledge() {
-    return this._knowledge;
-  }
-
-  set coordinator(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._coordinator = rawColumn;
-    }
-  }
-
-  get coordinator() {
-    return this._coordinator;
-  }
-
-  set email(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._email = rawColumn;
-    }
-  }
-
-  get email() {
-    return this._email;
-  }
-
-  set phone(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._phone = rawColumn;
-    }
-  }
-
-  get phone() {
-    return this._phone;
-  }
-
-  matchesFilter({ primary, terciary }) {
-    let primaryMatch = true;
-    let terciaryMatch = true;
-
-    if (primary.length > 0) {
-      primaryMatch = primary.includes(this.category);
-    }
-
-    const [campus] = terciary;
-
-    if (campus) {
-      terciaryMatch = this.campus === campus;
-    }
-    
-    return primaryMatch && terciaryMatch;
+    this.inspect.descriptionLong = removeAccent(this.description.long);
+    this.inspect.descriptionShort = removeAccent(this.description.short);
+    this.inspect.keywords = this.keywords.map(removeAccent);
+    this.inspect.knowledge = removeAccent(this.knowledge);
+    this.inspect.coordinator = removeAccent(this.coordinator);
   }
 }
 
 export class PDIGenerator {
-  static run(row) {
-    const base = new PDI(row[1], row[0], formatInput(row[3]), formatInput(row[4]), {
-      short: formatInput(row[10]),
-      long: formatInput(row[11]),
-    });
+  static run(row: []): PDI {
+    const hash: any = indexColumns(row);
 
-    if (checkUrl(row[6]))
-      base.url = formatInput(row[6]);
-    
-    base._knowledge = row[12];
-    base.keywords = row[14];
-    base.coordinator = formatInput(row[5]);
-    base.email = formatInput(row[7]);
-    base.phone = formatInput(row[8]);
-    
-    return base;
+    const name =        PDIGenerator.handleName(hash["B"]);
+    const email =       PDIGenerator.handleEmail(hash["H"]);
+    const phone =       PDIGenerator.handlePhone(hash["I"]);
+    const unity =       PDIGenerator.handleUnity(hash["E"]);
+    const campus =      PDIGenerator.handleCampus(hash["D"]);
+    const category =    PDIGenerator.handleCategory(hash["A"]);
+    const keywords =    PDIGenerator.handleKeywords(hash["O"]);
+    const knowledge =   PDIGenerator.handleKnowledge(hash["M"])
+    const coordinator = PDIGenerator.handleCoordinator(hash["F"]);
+    const description = PDIGenerator.handleDescription(hash);
+
+    const pdi = new PDI(
+      name,
+      category,
+      campus,
+      unity,
+      description,
+      keywords,
+      knowledge,
+      coordinator,
+      email,
+      phone,
+    );
+
+    return pdi;
+  }
+
+  private static handleName(rawName: string): string {
+    return `${rawName}`;
+  }
+
+  private static handleCategory(rawCategory: string): string {
+    return `${rawCategory}`;
+  }
+
+  private static handleCampus(rawCampus: string): string {
+    return `${rawCampus}`;
+  }
+
+  private static handleUnity(rawUnity: string): string {
+    return `${rawUnity}`;
+  }
+
+  private static handleDescription(indexed: any): Description {
+    return {
+      short: indexed["K"],
+      long: indexed["L"],
+    }
+  }
+
+  private static handleKeywords(kw: string): string[] {
+    return kw.split(';');
+  }
+
+  private static handleKnowledge(kn: string): string {
+    return `${kn}`;
+  }
+
+  private static handleCoordinator(coord: string): string {
+    return `${coord}`;
+  }
+
+  private static handleEmail(raw: string): string {
+    return `${raw}`;
+  }
+
+  private static handlePhone(raw: string): string {
+    return `${raw}`;
   }
 }
-
