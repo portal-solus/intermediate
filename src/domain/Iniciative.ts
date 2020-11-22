@@ -1,4 +1,4 @@
-import { formatURL, removeAccent } from '../format';
+import { formatURL, formatPhone, removeAccent } from '../format';
 import { indexColumns } from '../sheets';
 
 interface Description {
@@ -76,11 +76,11 @@ export class IniciativeGenerator {
   }
 
   private static handleName(rawName: string): string {
-    return `${rawName}`;
+    return rawName || "";
   }
   
   private static handleCategory(rawCategory: string): string {
-    return `${rawCategory}`;
+    return rawCategory || "";
   }
 
   private static handleDescription(indexed: any): Description {
@@ -91,33 +91,45 @@ export class IniciativeGenerator {
   }
 
   private static handleLocal(rawLocal: string): string {
-    return `${rawLocal}`;
+    return rawLocal || "";
   }
 
   private static handleUnity(rawUnity: string): string {
-    return `${rawUnity}`;
+    return rawUnity || "";
   }
 
   private static handleEmail(rawEmail: string): string {
-    return `${rawEmail}`;
+    return rawEmail || "";
   }
 
   private static handleDate(rawDate: string): string {
-    return `${rawDate}`;
+    return rawDate || "";
   }
 
   private static handleKeywords(kw: string): string[] {
-    return kw.split(';');
+    if (!kw)
+      return [];
+
+    return kw
+      .split(";")
+      .reduce((ks, k) => k.trim() ? ks.concat(k.trim()) : ks, []);
   }
 
   private static handleServices(rawServices: string): string {
-    return `${rawServices}`;
+    return rawServices || "";
   }
 
   private static handleContact(indexed: any): Contact {
+    let info = "";
+
+    if (indexed["M"])
+      info = indexed["M"]
+        .split(";")
+        .map(formatPhone);
+
     return {
-      person: indexed["L"],
-      info: indexed["M"],
+      person: indexed["L"] || "",
+      info
     };
   }
 
