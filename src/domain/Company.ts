@@ -1,4 +1,4 @@
-import { formatURL, removeAccent } from '../format';
+import { formatURL, formatPhone, removeAccent } from '../format';
 import { indexColumns } from '../sheets';
 
 interface Category {
@@ -33,7 +33,7 @@ export class Company {
     public readonly incubated: boolean,
     public readonly ecosystems: string[],
     public readonly services: string,
-    public readonly technologies: string,
+    public readonly technologies: string[],
     public readonly address: Address,
     public readonly phones: string[],
     public readonly url: string,
@@ -143,19 +143,19 @@ export class CompanyGenerator{
     }
   }
 
-  private static handleTechnologies(rawTechnologies: string): string {
+  private static handleTechnologies(rawTechnologies: string): string[] {
     const rejectValues = ["", ".", "0", "!", "?", "???", "-"];
     if (!rawTechnologies || rejectValues.includes(rawTechnologies))
-      return "";
+      return [];
 
-    return rawTechnologies;
+    return rawTechnologies.split(";");
   }
 
   private static handlePhones(rawPhones: string): string[] {
     if (!rawPhones || rawPhones == ".")
       return [];
 
-    return rawPhones.split(";");
+    return rawPhones.split(";").map(formatPhone);
   }
 
   private static handleUrl(rawUrl: string): string {
@@ -166,6 +166,9 @@ export class CompanyGenerator{
   }
 
   private static handleLogo(rawLogo: string): string {
-    return formatURL(rawLogo);
+    if (!rawLogo)
+      return "";
+
+    return `https://drive.google.com/uc?export=view&id=${rawLogo}`;
   }
 }
