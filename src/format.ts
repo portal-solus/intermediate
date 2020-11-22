@@ -1,5 +1,8 @@
-export const formatURL: (string) => string = (raw: string): string =>
-  raw.substr(0, 4) == "http" ? raw : `http://${raw}`;
+export const formatURL: (string) => string = (raw: string): string => {
+  if (raw.match(/n\/d/i)) return "";
+
+  return raw.substr(0, 4) == "http" ? raw : `http://${raw}`;
+}
 
 const tokenSeparator = " ";
 export const capitalizeName: (string) => string = (raw: string): string =>
