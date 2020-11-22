@@ -1,153 +1,102 @@
 import { fixPersonName, removeAccent } from "../format";
-import { columnValue } from "../sheets";
+import { columnValue, indexColumns } from "../sheets";
 
 export class Patent {
-  static ID = 1;
-  static keys = [
-    "inspect.name",
-    "inspect.summary",
-    "inspect.owners",
-    "inspect.inventors",
-    "inspect.ipcs",
-  ];
+  private static nextID = 1;
 
   public inspect: any = {};
+  public id: number;
 
-  public id: any;
-  public name: any;
-  public sumary: any;
-  public classification: any;
-  public ipcs: any;
-  public owners: any;
-  public status: any;
-
-  public _url: any;
-  public _photo: any;
-  public _inventors: any;
-  public _countriesWithProtection: any;
-
-
-  constructor(name, sumary, classification, ipcs, owners, status) {
-    this.id = Patent.ID++;
-    this.name = name;
+  constructor(
+    public readonly name: string,
+    public readonly sumary: string,
+    public readonly classification: string,
+    public readonly ipcs: string[],
+    public readonly owners: string[],
+    public readonly status: string,
+    public readonly url: string,
+    public readonly photo: string,
+    public readonly inventors: string[],
+    public readonly countriesWithProtection: string[],
+  ) {
+    this.id = Patent.nextID++;
     this.inspect.name = removeAccent(this.name);
-
-    this.sumary = sumary;
-    this.inspect.sumary = removeAccent(this.sumary);
-
-    this.classification = classification;
-    this.ipcs = ipcs;
-    this.inspect.ipcs = this.ipcs.map(removeAccent);
-
-    this.owners = owners;
+    this.inspect.summary = removeAccent(this.sumary);
     this.inspect.owners = this.owners.map(removeAccent);
-
-    this.status = status;
-
-    this._url = "";
-    this._photo = "";
-    this._inventors = [];
-    this._countriesWithProtection = [];
-  }
-
-  set url(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._url = rawColumn;
-    }
-  }
-
-  get url() {
-    return this._url;
-  }
-
-  set inventors(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._inventors = rawColumn.split(" | ").map(fixPersonName);
-
-      this.inspect.inventors = this._inventors.map(removeAccent);
-    }
-  }
-
-  get inventors() {
-    return this._inventors;
-  }
-
-  set countriesWithProtection(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._countriesWithProtection = rawColumn.split(";");
-    }
-  }
-
-  get countriesWithProtection() {
-    return this._countriesWithProtection;
-  }
-
-  set photo(rawColumn) {
-    if (rawColumn !== undefined && rawColumn != " ") {
-      this._photo = `https://drive.google.com/uc?export=view&id=${rawColumn}`;
-    }
-  }
-
-  get photo() {
-    return this._photo;
-  }
-
-  matchesFilter({ primary, secondary, terciary }, primaryAreaNameToCode) {
-    const primaryCodes = primary.map(primaryAreaNameToCode);
-
-    let doesMatch = true;
-
-    if (primaryCodes.length != 0) {
-      const primaryMatch =
-        primaryCodes.includes(this.classification.primary.cip.substr(0, 1)) ||
-        primaryCodes.includes(this.classification.secondary.cip.substr(0, 1));
-
-      doesMatch = doesMatch && primaryMatch;
-    }
-
-    if (doesMatch && secondary.length != 0) {
-      const secMatch =
-        secondary.includes(this.classification.primary.subarea) ||
-        secondary.includes(this.classification.secondary.subarea);
-
-      doesMatch = doesMatch && secMatch;
-    }
-
-    if (terciary.length != 0) {
-      const terMatch = terciary.includes(this.status);
-
-      doesMatch = doesMatch && terMatch;
-    }
-
-    return doesMatch;
+    this.inspect.inventors = this.inventors.map(removeAccent);
   }
 }
 
 export class PatentGenerator {
-  static run(row) {
-    const base = new Patent(
-      columnValue(row, "F"),
-      columnValue(row, "K"),
-      {
-        primary: {
-          cip: row[0].trim(),
-          subarea: row[1].trim(),
-        },
-        secondary: {
-          cip: row[2].trim(),
-          subarea: row[3].trim(),
-        },
-      },
-      columnValue(row, "G").split(" | "),
-      columnValue(row, "I").split(" | "),
-      columnValue(row, "M")
+  static run(row: []): Patent {
+    const hash = indexColumns(row);
+
+    const url =                     PatentGenerator.handleUrl(hash[""]);
+    const ipcs =                    PatentGenerator.handleIPCS(hash[""]);
+    const name =                    PatentGenerator.handleName(hash[""]);
+    const photo =                   PatentGenerator.handlePhoto(hash[""]);
+    const owners =                  PatentGenerator.handleOwners(hash[""]);
+    const status =                  PatentGenerator.handleStatus(hash[""]);
+    const summary =                 PatentGenerator.handleSummary(hash[""]);
+    const inventors =               PatentGenerator.handleInventors(hash[""]);
+    const classification =          PatentGenerator.handleClassification(hash[""]);
+    const countriesWithProtection = PatentGenerator.handleCountries(hash[""]);
+
+    const patent = new Patent(
+      name,
+      summary,
+      classification,
+      ipcs,
+      owners,
+      status,
+      url,
+      photo,
+      inventors,
+      countriesWithProtection,
     );
 
-    base.url = columnValue(row, "N");
-    base.inventors = columnValue(row, "J");
-    base.countriesWithProtection = columnValue(row, "L");
-    base.photo = columnValue(row, "O");
-    return base;
+    return patent;
   }
+
+    private static handleUrl(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handleIPCS(raw: string): string[] {
+      return raw.split(";");
+    }
+
+    private static handleName(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handlePhoto(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handleOwners(raw: string): string[] {
+      return raw.split(";");
+    }
+
+    private static handleStatus(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handleSummary(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handleInventors(raw: string): string[] {
+      return raw.split(";");
+    }
+
+    private static handleClassification(raw: string): string {
+      return `${raw}`;
+    }
+
+    private static handleCountries(raw: string): string[] {
+      return raw.split(";");
+    }
+
 }
 
