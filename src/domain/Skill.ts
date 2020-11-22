@@ -1,4 +1,4 @@
-import { removeAccent } from "../format";
+import { formatURL, formatPhone, removeAccent } from "../format";
 import { indexColumns } from "../sheets";
 
 interface Descriptions {
@@ -20,7 +20,7 @@ export class Skill {
     public readonly unity: string,
     public readonly campus: string,
     public readonly bond: string,
-    public readonly categories: string[],
+    public readonly categories: string,
     public readonly descriptions: Descriptions,
     public readonly area: string,
     public readonly phone: string,
@@ -44,19 +44,19 @@ export class SkillGenerator {
   static run(row) {
     const hash = indexColumns(row);
 
-    const url =           SkillGenerator.handleUrl(hash[""]);
-    const area =          SkillGenerator.handleArea(hash[""]);
-    const bond =          SkillGenerator.handleBond(hash[""]);
-    const name =          SkillGenerator.handleName(hash[""]);
-    const email =         SkillGenerator.handleEmail(hash[""]);
-    const unity =         SkillGenerator.handleUnity(hash[""]);
-    const phone =         SkillGenerator.handlePhone(hash[""]);
-    const campus =        SkillGenerator.handleCampus(hash[""]);
-    const lattes =        SkillGenerator.handleLattes(hash[""]);
-    const picture =       SkillGenerator.handlePicture(hash[""]);
-    const keywords =      SkillGenerator.handleKeywords(hash[""]);
-    const categories =    SkillGenerator.handleCategories(hash[""]);
-    const descriptions =  SkillGenerator.handleDescriptions(hash[""]);
+    const url =           SkillGenerator.handleUrl(hash["L"]);
+    const area =          SkillGenerator.handleArea(hash);
+    const bond =          SkillGenerator.handleBond(hash["H"]);
+    const name =          SkillGenerator.handleName(hash["C"]);
+    const email =         SkillGenerator.handleEmail(hash["D"]);
+    const unity =         SkillGenerator.handleUnity(hash["F"]);
+    const phone =         SkillGenerator.handlePhone(hash["AE"]);
+    const campus =        SkillGenerator.handleCampus(hash["G"]);
+    const lattes =        SkillGenerator.handleLattes(hash["AC"]);
+    const picture =       SkillGenerator.handlePicture(hash["AD"]);
+    const keywords =      SkillGenerator.handleKeywords(hash["AB"]);
+    const categories =    SkillGenerator.handleCategories(hash["I"]);
+    const descriptions =  SkillGenerator.handleDescriptions(hash);
 
     const skill = new Skill(
       name,
@@ -77,55 +77,77 @@ export class SkillGenerator {
     return skill;
   }
     private static handleUrl(raw: string): string {
-      return `${raw}`; 
+      if (!raw)
+        return "";
+
+      return formatURL(raw);
     }
 
-    private static handleArea(raw: string): string {
-      return `${raw}`; 
+    private static handleArea(indexed: any): any {
+      return {
+        major: indexed["Z"],
+        minors: indexed["AA"].split(';'),
+      }
     }
 
     private static handleBond(raw: string): string {
-      return `${raw}`; 
+      return raw || ""; 
     }
 
     private static handleName(raw: string): string {
-      return `${raw}`; 
+      return raw || ""; 
     }
 
     private static handleEmail(raw: string): string {
-      return `${raw}`; 
+      return raw || ""; 
     }
 
     private static handleUnity(raw: string): string {
-      return `${raw}`; 
+      return raw || ""; 
     }
 
     private static handlePhone(raw: string): string {
-      return `${raw}`; 
+      if (!raw)
+        return "";
+
+      return formatPhone(raw);
     }
 
     private static handleCampus(raw: string): string {
-      return `${raw}`; 
+      return raw || ""; 
     }
 
     private static handleLattes(raw: string): string {
-      return `${raw}`; 
+      if (!raw)
+        return "";
+
+      return formatURL(raw);
     }
 
     private static handlePicture(raw: string): string {
-      return `${raw}`; 
+      if (!raw)
+        return "";
+
+      return `https://drive.google.com/uc?export=view&id=${raw}`;
     }
 
     private static handleKeywords(raw: string): string[] {
+      if (!raw)
+        return [];
+
       return raw.split(';');
     }
 
-    private static handleCategories(raw: string): string[] {
-      return raw.split(';');
+    private static handleCategories(raw: string): string {
+      return raw || "";
     }
 
-    private static handleDescriptions(raw: string): any {
-      return `${raw}`; 
+    private static handleDescriptions(indexed: any): Descriptions {
+      return {
+        skills: indexed["W"],
+        services: indexed["X"],
+        equipments: indexed["Y"],
+      }
     }
 
 }
