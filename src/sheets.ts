@@ -7,3 +7,22 @@ export const columnValue: ([], string) => any = (row: [], colLetter: string): an
   return row[map.findIndex((x) => x === colLetter)];
 };
 
+
+export const indexColumns: ([]) => any = (row) => {
+  const dict = {};
+
+  row.forEach((el, i) => {
+    const major = Math.floor(i / 26) - 1;
+
+    const minor = i % 26;
+
+    let l = String.fromCharCode(65 + minor);
+    if (major >= 0) {
+      l = String.fromCharCode(65 + major) + l;
+    }
+
+    dict[l] = el;
+  });
+
+  return dict;
+}

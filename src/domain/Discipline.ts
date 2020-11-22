@@ -1,136 +1,109 @@
-import { formatURL, removeAccent } from "../format";
+import { formatURL, removeAccent } from '../format';
+import { indexColumns } from '../sheets';
+
+interface Description {
+  long: string;
+  short?: string;
+}
+
+interface Category {
+  business: boolean;
+  enterpreneurship: boolean;
+  innovation: boolean;
+  intellectualProperty: boolean;
+}
 
 export class Discipline {
-  static ID = 1;
-  static keys = [
-    "inspect.name",
-    "inspect.descriptionLong",
-    "inspect.descriptionShort"
-  ];
+  private static nextID: number = 1;
 
   public inspect: any = {};
-  public id: any;
-  public name: any;
-  public campus: any;
-  public unity: any;
-  public description: any;
-  public startData: any;
-  public level: any;
+  public id: number;
 
-  public _url: any;
-  public _category: any;
-
-  constructor(name, campus, unity, description, startData, level) {
-    this.id = Discipline.ID++;
-    this.name = name;
+  constructor(
+    public readonly name: string,
+    public readonly campus: string,
+    public readonly unity: string,
+    public readonly description: Description,
+    public readonly startDate: string,
+    public readonly level: string,
+    public readonly url: string,
+    public readonly category: Category,
+  ) {
+    this.id = Discipline.nextID++;
     this.inspect.name = removeAccent(this.name);
-
-    this.campus = campus;
-    this.unity = unity;
-    this.description = description;
-    this.inspect.descriptionLong = removeAccent(this.description.long || "");
-    this.inspect.descriptionShort = removeAccent(this.description.short || "");
-
-    this.startData = startData;
-    this.level = level;
-
-    this._url = "";
-    this._category = {
-      business: false,
-      entrepreneurship: false,
-      innovation: false,
-      intellectualProperty: false,
-    };
-  }
-
-  set url(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._url = formatURL(rawColumn);
-    }
-  }
-
-  get url() {
-    return this._url;
-  }
-
-  set categoryBusiness(rawColumn) {
-    if (rawColumn != undefined) {
-      this._category.business = rawColumn.length > 0;
-    }
-  }
-
-  set categoryEntrepreneurship(rawColumn) {
-    if (rawColumn != undefined) {
-      this._category.entrepreneurship = rawColumn.length > 0;
-    }
-  }
-
-  set categoryInnovation(rawColumn) {
-    if (rawColumn != undefined) {
-      this._category.innovation = rawColumn.length > 0;
-    }
-  }
-
-  set categoryIntellectualProperty(rawColumn) {
-    if (rawColumn != undefined) {
-      this._category.intellectualProperty = rawColumn.length > 0;
-    }
-  }
-
-  get category() {
-    return Object.assign({}, this._category);
-  }
-
-  matchesFilter({ primary, terciary }) {
-    const categories = [];
-    let primaryMatch = true;
-    let terciaryMatch = true;
-
-    if (this.category.business) categories.push("Negócios");
-    if (this.category.innovation) categories.push("Inovação");
-    if (this.category.entrepreneurship) categories.push("Empreendedorismo");
-    if (this.category.intellectualProperty)
-      categories.push("Propriedade Intelectual");
-
-    if (primary.length > 0) {
-      primaryMatch = categories.some((cat) => primary.includes(cat));
-    }
-
-    const [campus, level] = terciary;
-
-    if (campus != undefined) {
-      terciaryMatch = this.campus === campus;
-    }
-
-    if (level != undefined) {
-      terciaryMatch = terciaryMatch && this.level === level;
-    }
-
-    return primaryMatch && terciaryMatch;
+    this.inspect.descriptionLong = removeAccent(this.description.long);
+    this.inspect.descriptionShort = removeAccent(this.description.short);
   }
 }
 
 export class DisciplineGenerator {
-  static run(row) {
-    const base = new Discipline(
-      row[0],
-      row[1],
-      row[2],
-      {
-        short: row[4],
-        long: row[5],
-      },
-      row[6],
-      row[12]
+  static run(row: []): Discipline {
+    const hash: any = indexColumns(row);
+
+    const url =         DisciplineGenerator.handleUrl(hash["D"]);
+    const name =        DisciplineGenerator.handleName(hash["A"]);
+    const level =       DisciplineGenerator.handleLevel(hash["M"]);
+    const unity =       DisciplineGenerator.handleUnity(hash["C"]);
+    const campus =      DisciplineGenerator.handleCampus(hash["B"]);
+    const category =    DisciplineGenerator.handleCategory(hash);
+    const startDate =   DisciplineGenerator.handleDate(hash["G"]);
+    const description = DisciplineGenerator.handleDescription(hash);
+
+
+    const discipline: Discipline = new Discipline(
+      name,
+      campus,
+      unity,
+      description,
+      startDate,
+      level,
+      url,
+      category,
     );
 
-    base.url = row[3];
-    base.categoryBusiness = row[8];
-    base.categoryEntrepreneurship = row[9];
-    base.categoryInnovation = row[10];
-    base.categoryIntellectualProperty = row[11];
+    return discipline;
+  }
 
-    return base;
+  private static handleName(rawName: string): string {
+    return `${rawName}`;
+  }
+
+  private static handleCampus(rawCampus: string): string {
+    return `${rawCampus}`;
+  }
+
+  private static handleUnity(rawUnity: string): string {
+    return `${rawUnity}`
+  }
+
+  private static handleDescription(indexed: any): Description {
+    return {
+      long: indexed["E"] ? indexed["E"] : "",
+      short: indexed["F"] ? indexed["F"] : "",
+    }
+  }
+
+  private static handleDate(rawDate: string): string {
+    return `${rawDate}`;
+  }
+
+  private static handleLevel(rawLevel: string): string {
+    return `${rawLevel}`;
+  }
+
+  private static handleUrl(rawUrl: string): string {
+    if (rawUrl.match(/(n\/d| )/i))
+      return "";
+
+    return formatURL(rawUrl);
+  }
+
+  private static handleCategory(indexed: any): Category {
+    return {
+      business: indexed["I"] && indexed["I"].length,
+      enterpreneurship: indexed["J"] && indexed["J"].length,
+      innovation: indexed["K"] && indexed["K"].length,
+      intellectualProperty: indexed["L"] && indexed["L"].length,
+    }
   }
 }
-
