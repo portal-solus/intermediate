@@ -1,170 +1,130 @@
-import { columnValue } from "../sheets";
-import { formatURL, formatPhone, removeAccent } from "../format";
+import { formatURL, removeAccent } from '../format';
+import { indexColumns } from '../sheets';
 
-const spaceRgx = /( )/;
-const dotRgx = /^.+\..+$/; // match "bsa.legal" which is a valid url
+interface Description {
+  short: string;
+  long: string;
+}
 
-const checkUrl = (url) => !url.match(spaceRgx) && url.match(dotRgx);
+interface Contact {
+  person: string;
+  info: string;
+}
 
 export class Iniciative {
-  static ID = 1;
-  static keys = [
-    "inspect.name",
-    "inspect.descriptionLong",
-    "inspect.descriptionShort",
-    "inspect.keywords",
-    "inspect.services",
-  ];
+  private static nextID: number = 1;
 
   public inspect: any = {};
+  public id: number;
 
-  public id: any;
-  public name: any;
-  public category: any;
-  public description: any;
-  public local: any;
-  public email: any;
-  public unity: any;
-  public startDate: any;
-
-  public _keywords: any;
-  public _url: any;
-  public _socialMedia: any;
-  public _contact: any;
-  public _services: any;
-
-  constructor(name, category, description, local, unity, email, startDate) {
-    this.id = Iniciative.ID++;
-    this.name = name;
+  constructor(
+    public readonly name: string,
+    public readonly category: string,
+    public readonly description: Description,
+    public readonly local: string,
+    public readonly unity: string,
+    public readonly email: string,
+    public readonly startDate: string,
+    public readonly keywords: string[],
+    public readonly services: string,
+    public readonly contact: Contact,
+    public readonly url: string,
+  ) {
+    this.id = Iniciative.nextID++;
     this.inspect.name = removeAccent(this.name);
-
-    this.category = category;
-    this.description = description;
     this.inspect.descriptionLong = removeAccent(this.description.long);
     this.inspect.descriptionShort = removeAccent(this.description.short);
-
-    this.local = local;
-    this.unity = unity;
-    this.email = email;
-    this.startDate = startDate;
-
-    this._keywords = [];
-    this._url = "";
-    this._socialMedia = "";
-    this._contact = {
-      person: "",
-      info: [],
-    };
-    this._services = "";
-  }
-
-  set keywords(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._keywords = rawColumn.split(/[;,]/)
-        .filter(key => key.trim().length > 0)
-
-      this.inspect.keywords = this._keywords.map(removeAccent);
-    }
-  }
-
-  get keywords() {
-    return this._keywords;
-  }
-
-  set url(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._url = formatURL(rawColumn);
-    }
-  }
-
-  get url() {
-    return this._url;
-  }
-
-  set socialMedia(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._socialMedia = rawColumn;
-    }
-  }
-
-  get socialMedia() {
-    return this._socialMedia;
-  }
-
-  set contactPerson(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._contact.person = rawColumn;
-    }
-  }
-
-  set contactInfo(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._contact.info = rawColumn
-        .split(";")
-        .map((phone) => formatPhone(phone));
-    }
-  }
-
-  get contact() {
-    return Object.assign({}, this._contact);
-  }
-
-  set services(rawColumn) {
-    if (rawColumn != undefined && rawColumn != "") {
-      this._services = rawColumn;
-
-      this.inspect.services = removeAccent(this._services);
-    }
-  }
-
-  matchesFilter({ primary, terciary }) {
-    let primaryMatch = true;
-    let terciaryMatch = true;
-
-    if (primary.length > 0)
-      primaryMatch = primary.some(
-        (p) => p.toLowerCase() === this.category.toLowerCase()
-      );
-
-    const [campus] = terciary;
-
-    if (campus)
-      terciaryMatch = this.local
-        .split(",")
-        .map((l) => l.trim())
-        .includes(campus);
-
-    return primaryMatch && terciaryMatch;
+    this.inspect.keywords = removeAccent(this.keywords);
+    this.inspect.services = removeAccent(this.services);
+    this.inspect.contactPerson = removeAccent(this.contact.person);
   }
 }
 
 export class IniciativeGenerator {
-  static run(row) {
-    const base = new Iniciative(
-      row[1],
-      row[0],
-      {
-        short: row[2],
-        long: row[7],
-      },
-      row[3],
-      row[4],
-      row[8],
-      row[10]
+  static run(row: []): Iniciative {
+    const hash: any = indexColumns(row);
+
+    const url =         IniciativeGenerator.handleUrl(hash["G"]);
+    const name =        IniciativeGenerator.handleName(hash["B"]);
+    const email =       IniciativeGenerator.handleEmail(hash["I"]);
+    const local =       IniciativeGenerator.handleLocal(hash["D"]);
+    const unity =       IniciativeGenerator.handleUnity(hash["E"]);
+    const contact =     IniciativeGenerator.handleContact(hash);
+    const category =    IniciativeGenerator.handleCategory(hash["A"]);
+    const keywords =    IniciativeGenerator.handleKeywords(hash["F"]);
+    const services =    IniciativeGenerator.handleServices(hash["N"]);
+    const startDate =   IniciativeGenerator.handleDate(hash["K"]);
+    const description = IniciativeGenerator.handleDescription(hash);
+
+
+
+    const iniciative: Iniciative = new Iniciative(
+      name,
+      category,
+      description,
+      local,
+      unity,
+      email,
+      startDate,
+      keywords,
+      services,
+      contact,
+      url,
     );
 
-    base.keywords = columnValue(row, "F");
-    base.socialMedia = row[9];
-    base.services = row[13];
-    base.contactPerson = row[11];
-    base.contactInfo = columnValue(row, "M");
+    return iniciative;
+  }
 
-    const iniciativeUrl = columnValue(row, "G");
+  private static handleName(rawName: string): string {
+    return `${rawName}`;
+  }
+  
+  private static handleCategory(rawCategory: string): string {
+    return `${rawCategory}`;
+  }
 
-    if (checkUrl(iniciativeUrl))
-      base.url = iniciativeUrl;
+  private static handleDescription(indexed: any): Description {
+    return {
+      short: indexed["C"] ? indexed["C"] : "",
+      long: indexed["H"] ? indexed["H"] : "",
+    }
+  }
 
-    return base;
+  private static handleLocal(rawLocal: string): string {
+    return `${rawLocal}`;
+  }
+
+  private static handleUnity(rawUnity: string): string {
+    return `${rawUnity}`;
+  }
+
+  private static handleEmail(rawEmail: string): string {
+    return `${rawEmail}`;
+  }
+
+  private static handleDate(rawDate: string): string {
+    return `${rawDate}`;
+  }
+
+  private static handleKeywords(kw: string): string[] {
+    return kw.split(';');
+  }
+
+  private static handleServices(rawServices: string): string {
+    return `${rawServices}`;
+  }
+
+  private static handleContact(indexed: any): Contact {
+    return {
+      person: indexed["L"],
+      info: indexed["M"],
+    };
+  }
+
+  private static handleUrl(rawUrl: string): string {
+    if (rawUrl.match(/(n\/d| )/i))
+      return "";
+
+    return formatURL(rawUrl);
   }
 }
-
