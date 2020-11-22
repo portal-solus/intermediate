@@ -1,5 +1,15 @@
-import { fixPersonName, removeAccent } from "../format";
+import { fixPersonName, formatURL, removeAccent } from "../format";
 import { columnValue, indexColumns } from "../sheets";
+
+interface Classification {
+  cip: string;
+  subarea: string;
+}
+
+interface FullClassification {
+  primary: Classification;
+  secondary: Classification
+}
 
 export class Patent {
   private static nextID = 1;
@@ -10,7 +20,7 @@ export class Patent {
   constructor(
     public readonly name: string,
     public readonly sumary: string,
-    public readonly classification: string,
+    public readonly classification: FullClassification,
     public readonly ipcs: string[],
     public readonly owners: string[],
     public readonly status: string,
@@ -31,16 +41,16 @@ export class PatentGenerator {
   static run(row: []): Patent {
     const hash = indexColumns(row);
 
-    const url =                     PatentGenerator.handleUrl(hash[""]);
-    const ipcs =                    PatentGenerator.handleIPCS(hash[""]);
-    const name =                    PatentGenerator.handleName(hash[""]);
-    const photo =                   PatentGenerator.handlePhoto(hash[""]);
-    const owners =                  PatentGenerator.handleOwners(hash[""]);
-    const status =                  PatentGenerator.handleStatus(hash[""]);
-    const summary =                 PatentGenerator.handleSummary(hash[""]);
-    const inventors =               PatentGenerator.handleInventors(hash[""]);
-    const classification =          PatentGenerator.handleClassification(hash[""]);
-    const countriesWithProtection = PatentGenerator.handleCountries(hash[""]);
+    const url =                     PatentGenerator.handleUrl(hash["N"]);
+    const ipcs =                    PatentGenerator.handleIPCS(hash["G"]);
+    const name =                    PatentGenerator.handleName(hash["F"]);
+    const photo =                   PatentGenerator.handlePhoto(hash["O"]);
+    const owners =                  PatentGenerator.handleOwners(hash["I"]);
+    const status =                  PatentGenerator.handleStatus(hash["M"]);
+    const summary =                 PatentGenerator.handleSummary(hash["K"]);
+    const inventors =               PatentGenerator.handleInventors(hash["J"]);
+    const classification =          PatentGenerator.handleClassification(hash);
+    const countriesWithProtection = PatentGenerator.handleCountries(hash["L"]);
 
     const patent = new Patent(
       name,
@@ -59,11 +69,17 @@ export class PatentGenerator {
   }
 
     private static handleUrl(raw: string): string {
-      return `${raw}`;
+      if (!raw)
+        return "";
+
+      return formatURL(raw);
     }
 
     private static handleIPCS(raw: string): string[] {
-      return raw.split(";");
+      if (!raw)
+        return [];
+
+      return raw.split(" | ");
     }
 
     private static handleName(raw: string): string {
@@ -71,11 +87,17 @@ export class PatentGenerator {
     }
 
     private static handlePhoto(raw: string): string {
-      return `${raw}`;
+      if (!raw)
+        return "";
+
+      return `https://drive.google.com/uc?export=view&id=${raw}`
     }
 
     private static handleOwners(raw: string): string[] {
-      return raw.split(";");
+      if (!raw)
+        return [];
+
+      return raw.split(" | ");
     }
 
     private static handleStatus(raw: string): string {
@@ -87,16 +109,30 @@ export class PatentGenerator {
     }
 
     private static handleInventors(raw: string): string[] {
-      return raw.split(";");
+      if (!raw)
+        return [];
+
+      return raw.split(" | ").map(fixPersonName);
     }
 
-    private static handleClassification(raw: string): string {
-      return `${raw}`;
+    private static handleClassification(indexed: any): FullClassification {
+      return {
+        primary: {
+          cip: indexed["A"].trim(),
+          subarea: indexed["B"].trim(),
+        },
+        secondary: {
+          cip: indexed["C"].trim(),
+          subarea: indexed["D"].trim(),
+        }
+      }
     }
 
     private static handleCountries(raw: string): string[] {
-      return raw.split(";");
-    }
+      if (!raw)
+        return [];
 
+      return raw.split(';');
+    }
 }
 
