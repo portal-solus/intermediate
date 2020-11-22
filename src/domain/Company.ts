@@ -1,4 +1,4 @@
-import { removeAccent } from '../format';
+import { formatURL, removeAccent } from '../format';
 import { indexColumns } from '../sheets';
 
 interface Category {
@@ -19,7 +19,7 @@ interface Address {
 }
 
 export class Company {
-  static nextID: number = 0;
+  private static nextID: number = 1;
 
   public inspect: any = {};
   public id: number;
@@ -35,6 +35,9 @@ export class Company {
     public readonly services: string,
     public readonly technologies: string,
     public readonly address: Address,
+    public readonly phones: string[],
+    public readonly url: string,
+    public readonly logo: string,
   ) {
     this.id = Company.nextID++;
     this.inspect.name = removeAccent(this.name);
@@ -48,9 +51,12 @@ export class CompanyGenerator{
   static run(row: any[]): Company {
     const hash = indexColumns(row);
 
+    const url =           CompanyGenerator.handleUrl(hash["AI"]);
+    const logo =          CompanyGenerator.handleLogo(hash["BE"]);
     const name =          CompanyGenerator.handleName(hash["AC"]);
     const year =          CompanyGenerator.handleYear(hash["AE"]);
     const emails =        CompanyGenerator.handleEmails(hash["AH"]);
+    const phones =        CompanyGenerator.handlePhones(hash["AG"]);
     const address =       CompanyGenerator.handleAddress(hash)
     const category =      CompanyGenerator.handleCategory(hash["BY"]);
     const services =      CompanyGenerator.handleServices(hash["BD"]);
@@ -70,6 +76,9 @@ export class CompanyGenerator{
       services,
       technologies,
       address,
+      phones,
+      url,
+      logo,
     );
 
     return company;
@@ -140,5 +149,23 @@ export class CompanyGenerator{
       return "";
 
     return rawTechnologies;
+  }
+
+  private static handlePhones(rawPhones: string): string[] {
+    if (!rawPhones || rawPhones == ".")
+      return [];
+
+    return rawPhones.split(";");
+  }
+
+  private static handleUrl(rawUrl: string): string {
+    if (rawUrl.match(/(n\/d| )/i))
+      return "";
+
+    return formatURL(rawUrl);
+  }
+
+  private static handleLogo(rawLogo: string): string {
+    return formatURL(rawLogo);
   }
 }
