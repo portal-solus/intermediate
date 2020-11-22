@@ -135,7 +135,9 @@ export class SkillGenerator {
       if (!raw)
         return [];
 
-      return raw.split(';');
+      return raw
+        .split(';')
+        .reduce((ks, k) => k.trim() ? ks.concat(k.trim()) : ks, []);
     }
 
     private static handleCategories(raw: string): string {

@@ -89,7 +89,9 @@ export class PDIGenerator {
   }
 
   private static handleKeywords(kw: string): string[] {
-    return kw.split(';');
+    return kw
+      .split(';')
+      .reduce((ks, k) => k.trim() ? ks.concat(k.trim()) : ks, []);
   }
 
   private static handleKnowledge(kn: string): string {
