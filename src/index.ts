@@ -53,19 +53,38 @@ const writeDatabase: (any) => void = (db: any): void => {
 
 const db = {};
 
-pairs.forEach((pair: any): void => {
-    const { sheetID, sheetName, obj }: any = pair;
-
+const promises = pairs.map(({ sheetID, sheetName, obj }: any): Promise<any> => {
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/'${sheetName}'?key=${apiKey}`;
-
-    axios
-        .get(url)
-        .then((data: any): void => {
-            const { data: { values } }: any = data;
-            db[pluralize(obj)] = values.slice(1).map(domain[`${obj}Generator`].run);
-            if (Object.keys(db).length == 5)
-                writeDatabase(db);
-        })
-        .catch(err => console.log(err, "\n\n"))
+    return axios.get(url);
 });
 
+
+(async (): Promise<any> => {
+    const data = await Promise.all(promises);
+
+    pairs.forEach(({ obj }: any, i: number) => {
+        db[pluralize(obj)] = data[i].data.values
+            .slice(1)
+            .map(domain[`${obj}Generator`].run)
+    });
+
+    const skillAgg = db['Skills'].reduce((agg: any[], skill: any) => {
+        if (!agg[skill.area.major]) {
+            agg[skill.area.major] = {};
+        }
+
+        skill.area.minors.forEach((minor: string) => {
+            if (!agg[skill.area.major][minor]) {
+                agg[skill.area.major][minor] = [];
+            }
+
+            agg[skill.area.major][minor].push(skill);
+        });
+
+        return agg;
+    }, []);
+
+    console.log(skillAgg)
+
+    writeDatabase(db);
+})();

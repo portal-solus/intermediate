@@ -86,7 +86,7 @@ export class SkillGenerator {
     private static handleArea(indexed: any): any {
       return {
         major: indexed["Z"],
-        minors: indexed["AA"].split(';'),
+        minors: indexed["AA"].split(';').map(m => m.trim()),
       }
     }
 
